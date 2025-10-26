@@ -8,7 +8,7 @@ def buyTicket():
     params = flask.request.get_json()
 
     if not params:
-        return flask.jsonify({'error' : 'Invalid request'}), 400
+        return flask.jsonify({"error": "Invalid request"}), 400
     
     query_params = {
         'flight' : params.get('flight'),
@@ -17,7 +17,7 @@ def buyTicket():
     }
 
     if not all(query_params.values()):
-        return flask.jsonify({"error' : 'All fields 'flight', 'day', and 'user' are obrigatory"}), 400
+        return flask.jsonify({"error": "All fields 'flight', 'day', and 'user' are obrigatory"}), 400
 
     try:
         sale = requests.get(url="http://airlineshub:5000/flight",params=query_params)
@@ -32,7 +32,9 @@ def buyTicket():
         response = {
             'id_transaction' : transaction_id
         }
+
         return flask.jsonify(response), 200
+    
     except Exception as e:
         return flask.jsonify({'error': f'erro: {str(e)}'}), 500
 
