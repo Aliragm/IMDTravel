@@ -1,5 +1,6 @@
 import flask
 import requests
+import uuid
 
 database = [
     { 
@@ -84,6 +85,24 @@ def flight():
     except Exception as e:
         return flask.jsonify({'error': f'erro: {str(e)}'}), 500
     
+@app.route('/sell', methods=['POST'])
+def sell():
+    params = flask.request.get_json()
+    
+    flight = params.get('flight')
+
+    day = params.get('day')
+
+    if flight is None or day is None:
+        return flask.jsonify({"error": "All fields 'flight_num', 'day' are obrigatory"}), 400
+    
+    transaction_id = uuid.uuid4()
+
+    response = {
+        "transaction_id" : transaction_id
+    }
+
+    return flask.jsonify(response)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
