@@ -52,15 +52,7 @@ def flight():
         return flask.jsonify({"error": "All fields 'flight_num', 'day' are obrigatory"}), 400
         
     try:
-        dolar_today_request = requests.get(url="http://exchange:5000/exchange") #implementar Exchange
 
-        dolar_today_request.raise_for_status()
-
-        dolar_today = dolar_today_request.json().get('value')
-
-        if dolar_today is None:
-            return flask.jsonify({"error": "Response did not have an dolar value"}), 500
-        
         value = None
         for flight in database:
             if flight['flight_num'] == flight_num and flight['day'] == day:
@@ -76,7 +68,6 @@ def flight():
         response = {
             'flight' : value['flight_num'],
             'day' : value['day'],
-            'price_brl' : (value['price_usd'] * dolar_today),
             'price_usd' : value['price_usd']
         }
 
