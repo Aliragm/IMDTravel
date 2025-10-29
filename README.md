@@ -61,7 +61,7 @@ Se o voo for encontrado, o câmbio funcionar e o bônus for registrado, você re
     "user": 1,
     "price_usd": 300.5,
     "price_brl": 1650.14,
-    "fidelity": "Bonus received for user andre: 301 points"
+    "fidelity": "Bonus received for user 1: 301 points"
 }
 ```
 
