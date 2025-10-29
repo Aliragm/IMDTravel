@@ -12,9 +12,9 @@ def add_bonus():
     user_id = data.get('user')
     bonus_points = data.get('bonus')
 
-    print(f"Bonus received for user {user_id}: {bonus_points} points")
+    message = f"Bonus received for user {user_id}: {bonus_points} points"
 
-    return flask.jsonify({"status": "success", "message": "Bonus registered"}), 200
+    return flask.jsonify({"message": message}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
