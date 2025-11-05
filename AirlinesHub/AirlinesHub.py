@@ -1,6 +1,17 @@
 import flask
 import requests
 import uuid
+import random
+import time
+
+def omissionError():
+    prob = random.uniform(0,1)
+    
+    print(prob)
+    if prob < 0.2:
+        return 1
+    else:
+        return 0
 
 database = [
     { 
@@ -39,6 +50,10 @@ app = flask.Flask(__name__)
 
 @app.route('/flight', methods=['GET'])
 def flight():
+    failure = omissionError()
+    if failure == 1:
+        time.sleep(60)
+
     params = flask.request.args
 
     if not params:
