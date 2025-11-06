@@ -4,11 +4,30 @@ import uuid
 import random
 import time
 
+time_failure_duration = 0
+
 def omissionError():
     prob = random.uniform(0,1)
     
     print(prob)
     if prob < 0.2:
+        return 1
+    else:
+        return 0
+    
+def timeError():
+    global time_failure_duration
+
+    now = time.time()
+
+    if now < time_failure_duration:
+        return 1
+    
+    prob = random.uniform(0,1)
+
+    print(prob)
+    if prob < 0.1:
+        time_failure_duration = now + 10
         return 1
     else:
         return 0
@@ -52,7 +71,7 @@ app = flask.Flask(__name__)
 def flight():
     failure = omissionError()
     if failure == 1:
-        time.sleep(60)
+        return ('', 204)
 
     params = flask.request.args
 
@@ -77,9 +96,6 @@ def flight():
         if value is None:
             return flask.jsonify({"error": "flight was not found"}), 404
 
-
-        #implementar o request para o id da transação
-
         response = {
             'flight' : value['flight_num'],
             'day' : value['day'],
@@ -93,6 +109,10 @@ def flight():
     
 @app.route('/sell', methods=['POST'])
 def sell():
+    failure = timeError()
+    if failure == 1:
+        time.sleep(5)
+
     params = flask.request.get_json()
     
     flight = params.get('flight')
