@@ -1,9 +1,14 @@
 import flask
+import random
+import os
 
 app = flask.Flask(__name__)
 
 @app.route('/bonus', methods=['POST'])
 def add_bonus():
+    if random.random() < 0.02:
+        os._exit(1)
+    
     data = flask.request.get_json()
 
     if not data or 'user' not in data or 'bonus' not in data:
