@@ -62,11 +62,27 @@ def buyTicket():
         sale_day = sale_response.get('day')
         sale_price_usd = sale_response.get('price_usd')
 
-        dolar_today_request = requests.get(url="http://exchange:5000/exchange", timeout=1)
-        dolar_today_request.raise_for_status()
-        dolar_today = dolar_today_request.json().get('value')
+        # Implementação da tolerância a falhas para o Exchange (Retry)
+        dolar_today = None
+        max_retries_exchange = 3
+        
+        for attempt in range(max_retries_exchange):
+            try:
+                dolar_today_request = requests.get(url="http://exchange:5000/exchange", timeout=1)
+                dolar_today_request.raise_for_status()
+                value = dolar_today_request.json().get('value')
+                
+                if value is not None:
+                    dolar_today = value
+                    break
+            
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"Exchange service failed (Attempt {attempt+1}/{max_retries_exchange}): {e}")
+                if attempt < max_retries_exchange - 1:
+                    time.sleep(0.5)
+        
         if dolar_today is None:
-            return flask.jsonify({"error": "Response did not have an dolar value"}), 500
+            return flask.jsonify({"error": "Exchange service unavailable after retries"}), 500
 
         sale_price_brl = (sale_price_usd * dolar_today)
 
@@ -91,9 +107,15 @@ def buyTicket():
             "bonus" : round(sale_price_usd)
         }
 
-        fidelity = requests.post(url="http://fidelity:5000/bonus", json=params_bonus)
-        fidelity.raise_for_status()
-        fidelity_response = fidelity.json().get("message")
+        # Implementação da tolerância a falhas para o Fidelity (Degradação de Serviço)
+        fidelity_response = None
+        try:
+            fidelity = requests.post(url="http://fidelity:5000/bonus", json=params_bonus, timeout=2)
+            fidelity.raise_for_status()
+            fidelity_response = fidelity.json().get("message")
+        except Exception as e:
+            logger.error(f"Fidelity service failed: {e}")
+            fidelity_response = "Fidelity service unavailable, bonus not registered."
 
         final_response = {
             "response" : "Flight bought!",
@@ -106,6 +128,7 @@ def buyTicket():
         }
 
     except Exception as e:
+        logger.error(f"Global error: {str(e)}")
         return flask.jsonify({'error': f'erro: {str(e)}'}), 500
 
     return flask.jsonify(final_response), 200
