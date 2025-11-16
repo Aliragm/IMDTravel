@@ -8,6 +8,32 @@ app = flask.Flask(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 logger = logging.getLogger(__name__)
 
+def get_flight_with_retries(url, params, max_retries=3, timeout=1, backoff_base=0.5):
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.get(url=url, params=params, timeout=timeout)
+            if resp.status_code == 204:
+                last_err = Exception('no content (204)')
+                if attempt < max_retries:
+                    logger.info("/flight returned 204 (omission). retrying attempt %d/%d", attempt, max_retries)
+                    time.sleep(backoff_base * attempt)
+                    continue
+                else:
+                    raise last_err
+
+            resp.raise_for_status()
+            return resp.json()
+
+        except Exception as re:
+            logger.warning("Exception while calling /flight on attempt %d/%d: %s", attempt, max_retries, str(re))
+            last_err = re
+            if attempt < max_retries:
+                time.sleep(backoff_base * attempt)
+                continue
+            else:
+                raise
+
 @app.route('/buyTicket', methods=['POST'])
 def buyTicket():
     params = flask.request.get_json()
@@ -27,33 +53,6 @@ def buyTicket():
 
     if not all(query_params.values()):
         return flask.jsonify({"error": "All fields 'flight', 'day', and 'user' are obrigatory"}), 400
-
-    def get_flight_with_retries(url, params, max_retries=3, timeout=1, backoff_base=0.5):
-        last_err = None
-        for attempt in range(1, max_retries + 1):
-            try:
-                resp = requests.get(url=url, params=params, timeout=timeout)
-
-                if resp.status_code == 204:
-                    last_err = Exception('no content (204)')
-                    if attempt < max_retries:
-                        logger.info("/flight returned 204 (omission). retrying attempt %d/%d", attempt, max_retries)
-                        time.sleep(backoff_base * attempt)
-                        continue
-                    else:
-                        raise last_err
-
-                resp.raise_for_status()
-                return resp.json()
-
-            except Exception as re:
-                logger.warning("Exception while calling /flight on attempt %d/%d: %s", attempt, max_retries, str(re))
-                last_err = re
-                if attempt < max_retries:
-                    time.sleep(backoff_base * attempt)
-                    continue
-                else:
-                    raise
 
     try:
         sale_response = get_flight_with_retries(url="http://airlineshub:5000/flight", params=query_params)
