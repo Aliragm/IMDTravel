@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 exchange_history = [] 
 
-# ALTERAÇÃO 1: Aumentei max_retries padrão para 5 para vencer a estatística
 def get_flight_with_retries(url, params, max_retries=5, timeout=1, backoff_base=0.5):
     last_err = None
     for attempt in range(1, max_retries + 1):
@@ -19,7 +18,6 @@ def get_flight_with_retries(url, params, max_retries=5, timeout=1, backoff_base=
             if resp.status_code == 204:
                 last_err = Exception('no content (204)')
                 if attempt < max_retries:
-                    # logger.info removido para não poluir o teste de carga, descomente se quiser
                     time.sleep(backoff_base * attempt)
                     continue
                 else:
@@ -52,13 +50,11 @@ def buyTicket():
     if not all(query_params.values()): return flask.jsonify({"error": "Missing fields"}), 400
 
     try:
-        # 1. Busca Voo (Com 5 Retries)
         sale_response = get_flight_with_retries(url="http://airlineshub:5000/flight", params=query_params)
         sale_flight = sale_response.get('flight')
         sale_day = sale_response.get('day')
         sale_price_usd = sale_response.get('price_usd')
 
-        # 2. Câmbio (Com Fallback de Cache)
         dolar_today = None
         try:
             dolar_request = requests.get(url="http://exchange:5000/exchange", timeout=1)
@@ -69,7 +65,7 @@ def buyTicket():
                 exchange_history.append(val)
                 if len(exchange_history) > 10: exchange_history.pop(0)
         except Exception:
-            pass # Falhou, vamos pro fallback
+            pass
 
         if dolar_today is None:
             if len(exchange_history) > 0:
@@ -79,7 +75,6 @@ def buyTicket():
 
         sale_price_brl = (sale_price_usd * dolar_today)
 
-        # 3. Venda (Sell) - Onde estava o erro 504
         params_sell = {"flight": sale_flight, "day": sale_day}
         transaction_msg = "Transaction completed"
         status_code = 200
@@ -90,17 +85,14 @@ def buyTicket():
             transaction_msg = f"Transaction ID: {sell_post.json().get('transaction_id')}"
             
         except requests.exceptions.Timeout:
-            # ALTERAÇÃO 2: Tratamento Inteligente de Timeout
-            # Se o serviço de venda demora, não falhamos. Aceitamos o pedido para processar depois.
             logger.warning("Sell service timeout - Queuing transaction for background processing")
             transaction_msg = "High traffic: Transaction queued for processing."
-            status_code = 202 # Accepted
+            status_code = 202
             
         except Exception as re:
             logger.error("Error calling /sell: %s", re)
             return flask.jsonify({'error': 'Selling service error.'}), 500
 
-        # 4. Fidelidade (Best Effort)
         params_bonus = {"user" : user, "bonus" : round(sale_price_usd)}
         fidelity_response = "Pending"
         try:
@@ -122,7 +114,7 @@ def buyTicket():
         logger.error(f"Global error: {str(e)}")
         return flask.jsonify({'error': f'erro: {str(e)}'}), 500
 
-    return flask.jsonify(final_response), status_code # Retorna 200 ou 202
+    return flask.jsonify(final_response), status_code
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
