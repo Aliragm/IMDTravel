@@ -61,7 +61,6 @@ def buyTicket():
         sale_day = sale_response.get('day')
         sale_price_usd = sale_response.get('price_usd')
 
-        # Implementação da tolerância a falhas para o Exchange (Retry)
         dolar_today = None
         max_retries_exchange = 3
         
@@ -106,7 +105,6 @@ def buyTicket():
             "bonus" : round(sale_price_usd)
         }
 
-        # Implementação da tolerância a falhas para o Fidelity (Degradação de Serviço)
         fidelity_response = None
         try:
             fidelity = requests.post(url="http://fidelity:5000/bonus", json=params_bonus, timeout=2)

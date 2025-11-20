@@ -1,5 +1,4 @@
 import flask
-import requests
 import uuid
 import random
 import time
